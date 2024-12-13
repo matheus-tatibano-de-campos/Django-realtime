@@ -1,4 +1,4 @@
-{% load_bootstrap4 %}
+{% load bootstrap4 %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -8,46 +8,75 @@
 </head>
 <body>
     <div class="container">
-        <textarea id="sala" cols="70" rows="15"></textarea><br/>
-        <input id="texto" type="text" size="100"/><br/>
-        {% buttons %}
-            <input id="botao" type="button" value="Enviar">
-        {% endbuttons %}
+        <textarea id="sala" cols="70" rows="15" class="form-control" readonly></textarea><br/>
+        <input id="texto" type="text" size="50"><br/>
+        <button id="botao" class="btn btn-primary" type="button">Enviar</button>
     </div>
 
 {% bootstrap_javascript jquery='full' %}
 <script>
-  var nome_sala = {{ nome_sala_json }};
+  // Renderização correta da variável nome_sala
+  var nome_sala = "{{ nome_sala_json }}";
 
+  // Configuração do WebSocket
   var chatSocket = new WebSocket(
-      'ws://' + window.location.host +
-      '/ws/chat/' + nome_sala + '/'
+      'ws://' + window.location.host + '/ws/chat/' + nome_sala + '/'
   );
 
-  chatSocket.onmessage = function(e){
+  // Verificar se o WebSocket está conectado
+  chatSocket.onopen = function(e) {
+      console.log("Conexão WebSocket estabelecida.");
+  };
+
+  // Quando uma mensagem for recebida
+  chatSocket.onmessage = function(e) {
       var dados = JSON.parse(e.data);
       var mensagem = dados['mensagem'];
       document.querySelector('#sala').value += (mensagem + '\n');
   };
 
-  chatSocket.onclose = function(e){
-      console.error('o chat encerrou de forma  inesperada.');
+  // Quando o WebSocket for fechado
+  chatSocket.onclose = function(e) {
+      console.error('O chat encerrou de forma inesperada.');
   };
 
+  // Quando houver erro no WebSocket
+  chatSocket.onerror = function(e) {
+      console.error('Erro no WebSocket:', e);
+  };
+
+  // Focar no campo de texto ao carregar a página
   document.querySelector('#texto').focus();
-    document.querySelector('#texto').onkeyup = function(e){
-        if(e.keyCode === 13){
-            document.querySelector('#botao').click();
-        }
+
+  // Função para enviar mensagem
+  function enviarMensagem() {
+      var mensagemInput = document.querySelector('#texto');
+      var mensagem = mensagemInput.value.trim();
+
+      if (mensagem !== "") {
+          if (chatSocket.readyState === WebSocket.OPEN) {
+              chatSocket.send(JSON.stringify({
+                  'mensagem': mensagem
+              }));
+              mensagemInput.value = '';
+          } else {
+              alert("Conexão WebSocket não está aberta.");
+          }
+      } else {
+          alert("Por favor, insira uma mensagem.");
+      }
+  }
+
+  // Enviar mensagem ao pressionar Enter
+  document.querySelector('#texto').onkeyup = function(e) {
+      if (e.key === "Enter") {  // Substituído e.keyCode por e.key
+          enviarMensagem();
+      }
   };
 
-  documnet.querySelector('#botao').onclick = function(e){
-      var mensagemInput = documnet.querySelector('#texto');
-      var mensagem = mensagemInput.value;
-      chatSocket.send(JSON.stringfy({
-          'mensagem': mensagem
-      }));
-      mensagemInput.value = '';
+  // Enviar mensagem ao clicar no botão
+  document.querySelector('#botao').onclick = function() {
+      enviarMensagem();
   };
 </script>
 </body>

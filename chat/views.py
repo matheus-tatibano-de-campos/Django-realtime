@@ -18,4 +18,3 @@ class SalaView(TemplateView):
         return context
 
 
-    P
